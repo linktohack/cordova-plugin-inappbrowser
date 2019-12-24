@@ -39,9 +39,12 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.text.InputType;
+import android.util.DisplayMetrics;
+import android.util.Log;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.KeyEvent;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
@@ -105,6 +108,11 @@ public class InAppBrowser extends CordovaPlugin {
     private static final String LOAD_STOP_EVENT = "loadstop";
     private static final String LOAD_ERROR_EVENT = "loaderror";
     private static final String MESSAGE_EVENT = "message";
+
+    // TUNT: start update
+    private static final String CLICK_OUTSIDE_EVENT = "clickoutside";
+    // TUNT: end update
+
     private static final String CLEAR_ALL_CACHE = "clearcache";
     private static final String CLEAR_SESSION_CACHE = "clearsessioncache";
     private static final String HARDWARE_BACK_BUTTON = "hardwareback";
@@ -125,10 +133,10 @@ public class InAppBrowser extends CordovaPlugin {
     // TUNT: Additional variables
     private static final String FULLSCREEN = "fullscreen";
     private static final String TRANSPARENT_BACKGROUND = "transparentbackground";
-    private static final String MARGIN_TOP = "marginTop";
-    private static final String MARGIN_BOTTOM = "marginBottom";
+    private static final String MARGIN_TOP = "margintop";
+    private static final String MARGIN_BOTTOM = "marginbottom";
 
-    private static final List customizableOptions = Arrays.asList(CLOSE_BUTTON_CAPTION, TOOLBAR_COLOR, NAVIGATION_COLOR, CLOSE_BUTTON_COLOR, FOOTER_COLOR);
+    private static final List customizableOptions = Arrays.asList(CLOSE_BUTTON_CAPTION, TOOLBAR_COLOR, NAVIGATION_COLOR, CLOSE_BUTTON_COLOR, FOOTER_COLOR, MARGIN_TOP, MARGIN_BOTTOM);
 
     private InAppBrowserDialog dialog;
     private WebView inAppWebView;
@@ -728,7 +736,7 @@ public class InAppBrowser extends CordovaPlugin {
                 transparentBackground = transparentBackgroundSet.equals("yes") ? true : false;
             }
             String marginTopSet = features.get(MARGIN_TOP);
-            if (marginTopSet != null && isNumeric((marginTopSet))) {
+            if (marginTopSet != null && isNumeric(marginTopSet)) {
                 try {
                     marginTop = Integer.parseInt(marginTopSet);
                 } catch (Exception e) {
@@ -736,7 +744,7 @@ public class InAppBrowser extends CordovaPlugin {
                 }
             }
             String marginBottomSet = features.get(MARGIN_BOTTOM);
-            if (marginBottomSet != null && isNumeric((marginBottomSet))) {
+            if (marginBottomSet != null && isNumeric(marginBottomSet)) {
                 try {
                     marginBottom = Integer.parseInt(marginBottomSet);
                 } catch (Exception e) {
@@ -1107,7 +1115,32 @@ public class InAppBrowser extends CordovaPlugin {
                 dialog.getWindow().setAttributes(lp);
 
                 // TUNT: start update
-                main.setPadding(0, marginTop, 0, marginBottom);
+                main.setOnTouchListener((v, event) -> {
+                    if (event.getAction() == MotionEvent.ACTION_DOWN) {
+                        try {
+                            DisplayMetrics metrics = dialog.getContext().getResources().getDisplayMetrics();
+                            int x = (int) (event.getX() / metrics.density);
+                            int y = (int) (event.getY() / metrics.density);
+                            Log.e("TUNT", "setOnTouchListener1 " + x + " | " + y);
+                            JSONObject obj = new JSONObject();
+                            obj.put("type", CLICK_OUTSIDE_EVENT);
+                            obj.put("data", x + " | " + y);
+                            sendUpdate(obj, true);
+                            Log.e("TUNT", "sendUpdate success");
+                        } catch (JSONException ex) {
+                            LOG.e("TUNT", "sendUpdate failed | data object passed to postMessage has caused a JSON error.");
+                        }
+                        return true;
+                    }
+                    return false;
+                });
+
+                DisplayMetrics metrics = dialog.getContext().getResources().getDisplayMetrics();
+
+                // TUNT: add density because Android real-position = position(px) * density;
+                main.setPadding(0, (int) (marginTop * metrics.density), 0, (int) (marginBottom * metrics.density));
+                Log.e("TUNT", "marginTop " + marginTop);
+                Log.e("TUNT", "marginBottom " + marginBottom);
                 if (transparentBackground) {
                     main.setBackgroundColor(Color.TRANSPARENT);
                     dialog.getWindow().setBackgroundDrawable(new ColorDrawable(android.graphics.Color.TRANSPARENT));
@@ -1403,7 +1436,7 @@ public class InAppBrowser extends CordovaPlugin {
          * New (added in API 21)
          * For Android 5.0 and above.
          *
-         * @param webView
+         * @param view
          * @param request
          */
         @TargetApi(Build.VERSION_CODES.LOLLIPOP)
