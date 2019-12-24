@@ -1118,17 +1118,19 @@ public class InAppBrowser extends CordovaPlugin {
                 main.setOnTouchListener((v, event) -> {
                     if (event.getAction() == MotionEvent.ACTION_DOWN) {
                         try {
+                            // TUNT: convert pixel on android to real pixel on web;
                             DisplayMetrics metrics = dialog.getContext().getResources().getDisplayMetrics();
                             int x = (int) (event.getX() / metrics.density);
                             int y = (int) (event.getY() / metrics.density);
-                            Log.e("TUNT", "setOnTouchListener1 " + x + " | " + y);
                             JSONObject obj = new JSONObject();
-                            obj.put("type", CLICK_OUTSIDE_EVENT);
-                            obj.put("data", x + " | " + y);
-                            sendUpdate(obj, true);
-                            Log.e("TUNT", "sendUpdate success");
+                            JSONObject data = new JSONObject();
+                            data.put("type", CLICK_OUTSIDE_EVENT);
+                            data.put("value", x + "|" + y);
+                            obj.put("type", MESSAGE_EVENT);
+                            obj.put("data", data);
+                            dialog.inAppBrowser.sendUpdate(obj, true);
                         } catch (JSONException ex) {
-                            LOG.e("TUNT", "sendUpdate failed | data object passed to postMessage has caused a JSON error.");
+                            LOG.e(LOG_TAG, "data object passed to postMessage has caused a JSON error.");
                         }
                         return true;
                     }
@@ -1139,8 +1141,6 @@ public class InAppBrowser extends CordovaPlugin {
 
                 // TUNT: add density because Android real-position = position(px) * density;
                 main.setPadding(0, (int) (marginTop * metrics.density), 0, (int) (marginBottom * metrics.density));
-                Log.e("TUNT", "marginTop " + marginTop);
-                Log.e("TUNT", "marginBottom " + marginBottom);
                 if (transparentBackground) {
                     main.setBackgroundColor(Color.TRANSPARENT);
                     dialog.getWindow().setBackgroundDrawable(new ColorDrawable(android.graphics.Color.TRANSPARENT));
