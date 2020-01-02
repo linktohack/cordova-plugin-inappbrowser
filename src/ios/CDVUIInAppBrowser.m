@@ -233,6 +233,28 @@ static CDVUIInAppBrowser* instance = nil;
     }
 }
 
+/*
+ TUNT: update add handle click on view
+ */
+//The event handling method
+- (void)handleSingleTap:(UITapGestureRecognizer *)recognizer
+{
+    NSLog(@"TUNT clicked");
+//  CGPoint location = [recognizer locationInView:[recognizer.view superview]];
+//    NSLog(@"TUNT handleSingleTap %@", NSStringFromCGPoint(location));
+//    NSLog(location)
+  //Do stuff here...
+    /*
+     self.inAppBrowserViewController.view.
+     NSMutableDictionary* dResult = [NSMutableDictionary new];
+     [dResult setValue:@"message" forKey:@"type"];
+     [dResult setObject:decodedResult forKey:@"data"];
+     CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:dResult];
+     [pluginResult setKeepCallback:[NSNumber numberWithBool:YES]];
+     [self.commandDelegate sendPluginResult:pluginResult callbackId:self.callbackId];
+     */
+}
+
 - (void)show:(CDVInvokedUrlCommand*)command
 {
     if (self.inAppBrowserViewController == nil) {
@@ -243,6 +265,17 @@ static CDVUIInAppBrowser* instance = nil;
         NSLog(@"Tried to show IAB while already shown");
         return;
     }
+
+    /*:
+        TUNT: update
+     set transparent for container of webview
+    */
+    self.inAppBrowserViewController.view.backgroundColor = UIColor.clearColor;
+    // click event
+    UITapGestureRecognizer *singleFingerTap =
+      [[UITapGestureRecognizer alloc] initWithTarget:self.inAppBrowserViewController.view
+                                              action:@selector(handleSingleTap:)];
+    [self.inAppBrowserViewController.view addGestureRecognizer:singleFingerTap];
 
     _previousStatusBarStyle = [UIApplication sharedApplication].statusBarStyle;
 
@@ -1009,7 +1042,15 @@ static CDVUIInAppBrowser* instance = nil;
 
 - (void) rePositionViews {
     if ([_browserOptions.toolbarposition isEqualToString:kInAppBrowserToolbarBarPositionTop]) {
-        [self.webView setFrame:CGRectMake(self.webView.frame.origin.x, TOOLBAR_HEIGHT, self.webView.frame.size.width, self.webView.frame.size.height)];
+        /*:
+            TUNT: update
+            setup x/y and height of webview
+        */
+        const CGFloat webviewHeight = self.view.frame.size.height - (_browserOptions.margintop + _browserOptions.marginbottom);
+        
+        [self.webView setFrame:CGRectMake(self.webView.frame.origin.x, _browserOptions.margintop, self.webView.frame.size.width, webviewHeight)];
+
+         // [self.webView setFrame:CGRectMake(self.webView.frame.origin.x, TOOLBAR_HEIGHT, self.webView.frame.size.width, self.webView.frame.size.height)];
         [self.toolbar setFrame:CGRectMake(self.toolbar.frame.origin.x, [self getStatusBarOffset], self.toolbar.frame.size.width, self.toolbar.frame.size.height)];
     }
 }

@@ -48,6 +48,12 @@
         self.toolbarcolor = nil;
         self.toolbartranslucent = YES;
         self.beforeload = @"";
+
+        // TUNT: update
+        self.isfullscreen = YES;
+        self.transparentbackground = NO;
+        self.margintop = 0;
+        self.marginbottom = 0;
     }
 
     return self;

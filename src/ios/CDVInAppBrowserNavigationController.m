@@ -37,6 +37,13 @@
 
     UIToolbar* bgToolbar = [[UIToolbar alloc] initWithFrame:statusBarFrame];
     bgToolbar.barStyle = UIBarStyleDefault;
+
+    /*
+     TUNT: update
+     set transparent for status bar
+     */
+    bgToolbar.backgroundColor = UIColor.clearColor;
+
     [bgToolbar setAutoresizingMask:UIViewAutoresizingFlexibleWidth];
     [self.view addSubview:bgToolbar];
 

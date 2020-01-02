@@ -48,6 +48,12 @@
 @property (nonatomic, assign) BOOL disallowoverscroll;
 @property (nonatomic, copy) NSString* beforeload;
 
+// TUNT: update
+@property (nonatomic, assign) BOOL isfullscreen;
+@property (nonatomic, assign) BOOL transparentbackground;
+@property (nonatomic, assign) int margintop;
+@property (nonatomic, assign) int marginbottom;
+
 + (CDVInAppBrowserOptions*)parseOptions:(NSString*)options;
 
 @end
