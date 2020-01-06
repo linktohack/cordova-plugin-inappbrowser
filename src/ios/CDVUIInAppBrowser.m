@@ -233,28 +233,6 @@ static CDVUIInAppBrowser* instance = nil;
     }
 }
 
-/*
- TUNT: update add handle click on view
- */
-//The event handling method
-- (void)handleSingleTap:(UITapGestureRecognizer *)recognizer
-{
-    NSLog(@"TUNT clicked");
-//  CGPoint location = [recognizer locationInView:[recognizer.view superview]];
-//    NSLog(@"TUNT handleSingleTap %@", NSStringFromCGPoint(location));
-//    NSLog(location)
-  //Do stuff here...
-    /*
-     self.inAppBrowserViewController.view.
-     NSMutableDictionary* dResult = [NSMutableDictionary new];
-     [dResult setValue:@"message" forKey:@"type"];
-     [dResult setObject:decodedResult forKey:@"data"];
-     CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:dResult];
-     [pluginResult setKeepCallback:[NSNumber numberWithBool:YES]];
-     [self.commandDelegate sendPluginResult:pluginResult callbackId:self.callbackId];
-     */
-}
-
 - (void)show:(CDVInvokedUrlCommand*)command
 {
     if (self.inAppBrowserViewController == nil) {
@@ -265,17 +243,6 @@ static CDVUIInAppBrowser* instance = nil;
         NSLog(@"Tried to show IAB while already shown");
         return;
     }
-
-    /*:
-        TUNT: update
-     set transparent for container of webview
-    */
-    self.inAppBrowserViewController.view.backgroundColor = UIColor.clearColor;
-    // click event
-    UITapGestureRecognizer *singleFingerTap =
-      [[UITapGestureRecognizer alloc] initWithTarget:self.inAppBrowserViewController.view
-                                              action:@selector(handleSingleTap:)];
-    [self.inAppBrowserViewController.view addGestureRecognizer:singleFingerTap];
 
     _previousStatusBarStyle = [UIApplication sharedApplication].statusBarStyle;
 
@@ -496,7 +463,7 @@ static CDVUIInAppBrowser* instance = nil;
     BOOL useBeforeLoad = NO;
     NSString* httpMethod = request.HTTPMethod;
     NSString* errorMessage = nil;
-    
+
     if([_beforeload isEqualToString:@"post"]){
         //TODO handle POST requests by preserving POST data then remove this condition
         errorMessage = @"beforeload doesn't yet support POST requests";
@@ -558,11 +525,11 @@ static CDVUIInAppBrowser* instance = nil;
         CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK
                                                       messageAsDictionary:@{@"type":@"beforeload", @"url":[url absoluteString]}];
         [pluginResult setKeepCallback:[NSNumber numberWithBool:YES]];
-        
+
         [self.commandDelegate sendPluginResult:pluginResult callbackId:self.callbackId];
         return NO;
     }
-    
+
     if(errorMessage != nil){
         NSLog(errorMessage);
         CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR
@@ -685,6 +652,7 @@ static CDVUIInAppBrowser* instance = nil;
     BOOL toolbarIsAtBottom = ![_browserOptions.toolbarposition isEqualToString:kInAppBrowserToolbarBarPositionTop];
     webViewBounds.size.height -= _browserOptions.location ? FOOTER_HEIGHT : TOOLBAR_HEIGHT;
     self.webView = [[UIWebView alloc] initWithFrame:webViewBounds];
+    [self setWebViewFrame:webViewBounds];
 
     self.webView.autoresizingMask = (UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight);
 
@@ -812,11 +780,41 @@ static CDVUIInAppBrowser* instance = nil;
     [self.view addSubview:self.toolbar];
     [self.view addSubview:self.addressLabel];
     [self.view addSubview:self.spinner];
+
+    if (_browserOptions.transparentbackground) {
+        self.view.backgroundColor = [UIColor colorWithRed:1.0 green:1.0 blue:1.0 alpha:0.0];
+    }
+
+    UITapGestureRecognizer *singleFingerTap =
+    [[UITapGestureRecognizer alloc] initWithTarget:self
+                                            action:@selector(handleSingleTap:)];
+    [self.view addGestureRecognizer:singleFingerTap];
+}
+
+//The event handling method
+- (void)handleSingleTap:(UITapGestureRecognizer *)recognizer
+{
+    CGPoint location = [recognizer locationInView:[recognizer.view superview]];
+    NSLog(@"%@", NSStringFromCGPoint(location));
+    if (self.navigationDelegate.callbackId != nil) {
+        NSDictionary *data = @{@"type": @"clickoutside", @"value": [NSString stringWithFormat:@"%f|%f", location.x, location.y]};
+        CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK
+                                                      messageAsDictionary:@{@"type":@"message", @"data":data}];
+        [pluginResult setKeepCallback:[NSNumber numberWithBool:YES]];
+        [self.navigationDelegate.commandDelegate sendPluginResult:pluginResult callbackId:self.navigationDelegate.callbackId];
+    }
 }
 
 - (void) setWebViewFrame : (CGRect) frame {
     NSLog(@"Setting the WebView's frame to %@", NSStringFromCGRect(frame));
-    [self.webView setFrame:frame];
+    if (_browserOptions.margintop || _browserOptions.marginbottom) {
+        CGRect webViewBounds = self.view.bounds;
+        webViewBounds.origin.y += _browserOptions.margintop;
+        webViewBounds.size.height -= (_browserOptions.margintop + _browserOptions.marginbottom);
+        [self.webView setFrame:webViewBounds];
+    } else {
+        [self.webView setFrame:frame];
+    }
 }
 
 - (void)setCloseButtonTitle:(NSString*)title : (NSString*) colorString : (int) buttonIndex
@@ -1042,15 +1040,7 @@ static CDVUIInAppBrowser* instance = nil;
 
 - (void) rePositionViews {
     if ([_browserOptions.toolbarposition isEqualToString:kInAppBrowserToolbarBarPositionTop]) {
-        /*:
-            TUNT: update
-            setup x/y and height of webview
-        */
-        const CGFloat webviewHeight = self.view.frame.size.height - (_browserOptions.margintop + _browserOptions.marginbottom);
-        
-        [self.webView setFrame:CGRectMake(self.webView.frame.origin.x, _browserOptions.margintop, self.webView.frame.size.width, webviewHeight)];
-
-         // [self.webView setFrame:CGRectMake(self.webView.frame.origin.x, TOOLBAR_HEIGHT, self.webView.frame.size.width, self.webView.frame.size.height)];
+        [self setWebViewFrame:CGRectMake(self.webView.frame.origin.x, TOOLBAR_HEIGHT, self.webView.frame.size.width, self.webView.frame.size.height)];
         [self.toolbar setFrame:CGRectMake(self.toolbar.frame.origin.x, [self getStatusBarOffset], self.toolbar.frame.size.width, self.toolbar.frame.size.height)];
     }
 }
